@@ -1,0 +1,34 @@
+## Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+## C extensions
+*.so
+*.o
+
+## temp emacs
+*~
+.\#*
+\#*\#
+SessionDesktop.el
+auto-save-list/
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+## DJANGO
+irn/migrations/
+
+## LOCAL README
+00README.txt
+00README.md
+
+## Jekyll
+_site
