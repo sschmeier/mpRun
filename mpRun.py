@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 NAME: mpRun.py
-========================
+==============
 
 DESCRIPTION
 ===========
@@ -56,7 +56,7 @@ def parse_cmdline():
     oParser.add_argument('sCMD',
                          metavar='CMD',
                          type=str,
-                         help='Command to execute on every {{INPUT}} file. Should contain one "{{INPUT}}" and one optional "{{OUTPUT}}" placeholder discriptor in the CMD, which are substituted with the filenames supplied, e.g. "cat {{INPUT}} | wc -l > temp/{{OUTPUT}}"')
+                         help='Command to execute on every {{INPUT}} file. Should contain one "{{INPUT}}" and one optional "{{OUTPUT}}" placeholder descriptor in the CMD, which are substituted with the filenames supplied, e.g. "cat {{INPUT}} | wc -l > temp/{{OUTPUT}}"')
     oParser.add_argument('aFiles',
                          nargs='+',
                          metavar='FILE',
@@ -86,7 +86,7 @@ def parse_cmdline():
                          action='store_true',
                          dest='bNoProgress',
                          default=False,
-                         help='Turn the progress-bar off. A progress-bar will force a "chunksize" of 1 for the threading. This might slow things down for very large job numbers, but allows for a realistic progress-bar. [default: Show progress-bar]')
+                         help='Turn the progress-bar off. A progress-bar will force a "chunksize" of 1 in threading. This might slow things down for very large job numbers, but allows for a realistic progress-bar. [default: Show progress-bar -> chunksize = 1]')
 
     oArgs = oParser.parse_args()
     return oArgs, oParser
