@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-NAME: multiprocessRun.py
+NAME: mpRun.py
 ========================
 
 DESCRIPTION
@@ -10,12 +10,12 @@ the CMD on a set of files via multiple processes simultaneously.
 
 INSTALLATION
 ============
-1. Download multiprocessRun.py
+1. Download mpRun.py
 2. Run
 
 USAGE
 =====
-python multiprocessRun.py -p 8 "cat {{INPUT}} | wc -l > temp/{{OUTPUT}}" *.txt
+python mpRun.py -p 8 "cat {{INPUT}} | wc -l > temp/{{OUTPUT}}" *.txt
 
 {{INPUT}}
 Will be replaced with the files supplied one at a time to create the pool of jobs.
@@ -61,12 +61,18 @@ def parse_cmdline():
                          metavar='FILE',
                          type=str,
                          help='Files to use as {{INPUT}}.')
-    oParser.add_argument('--error',
+    oParser.add_argument('--stderr',
                          type=str,
                          metavar='PATH',
                          dest='sErrorPath',
                          default=None,
-                         help='Create a separate error file for each job in the directory at PATH. [default: Do not create any error-files]')
+                         help='Create a separate error file for each job in the directory at PATH. [default: Do not create any error-files, stderr->dev/null]')
+    oParser.add_argument('--stdout',
+                         type=str,
+                         metavar='PATH',
+                         dest='sStdoutPath',
+                         default=None,
+                         help='Create a separate stdout-file for each job in the directory at PATH. [default: Do not create any stdout-files, stdout->dev/null]')
 
     group1 = oParser.add_argument_group('Multithreading', 'optional arguments:')
     group1.add_argument('-p', '--processes',
@@ -92,32 +98,43 @@ def run_command(args):
     res = ...
     return (args, res)
     """
-    sJob = str(args[0])  # job number
+    sJob = str(args[0])  # job number, not used
     sCMD = args[1]  # command to execute
-    sERR = args[2]  # error file
+    sERR = args[2]  # stderr file
+    sOUT = args[3]  # stdout file
 
     if sERR:
-        oFNULL = open(sERR, 'w')
+        oFstderr = open(sERR, 'w')
+    else:
+        # standard err to /dev/null
+        oFstderr = open(os.devnull, 'w')
+
+    if sOUT:
+        oFstdout = open(sOUT, 'w')
     else:
         # standard out to /dev/null
-        oFNULL = open(os.devnull, 'w')
+        oFstdout = open(os.devnull, 'w')
 
-    # TODO:
-    # Need to get response of successful run
-    # and let user know if problems have been reported.
-    subprocess.call(sCMD, shell=True, stdout=oFNULL, stderr=oFNULL)
+    iReturncode = subprocess.call(sCMD, shell=True, stdout=oFstdout, stderr=oFstderr)
     oFNULL.close()
-    bRes = 1
-    return (args, bRes)
+    # TEST:
+    # check returncode for non-zero status
+    if iReturncode != 0:
+        sys.stderr.write('[mpRun WARNING]: *** Non-zero exit codes of child process encountered. Better check with --error. ***\n')
+    return (args, iReturncode)
 
 def main():
     oArgs, oParser = parse_cmdline()
 
+    # TEST:
+    # Supplied file list not empty
     if len(oArgs.aFiles)<1:
         oParser.error('You need to supply at least one file. EXIT.')
     aFiles = []
     for sFile in oArgs.aFiles:
         sF = os.path.abspath(os.path.expanduser(sFile))
+        # TEST:
+        # Test that file exisits
         if os.path.isfile(sF):
             aFiles.append(sF)
         else:
@@ -127,28 +144,45 @@ def main():
     sCMD = oArgs.sCMD
     aRes1 = re.findall('{{INPUT}}', sCMD)
     aRes2 = re.findall('{{OUTPUT}}', sCMD)
-    # this is required
+
+    # TEST:
+    # Test that {{INPUT}} is given as it is required
     if len(aRes1) != 1:
         oParser.error('CMD should contain exactly one occurrence of an {{INPUT}} placeholder. EXIT.')
-    # this is optional
+    # this is optional, give warning
     if len(aRes2) == 0:
-        sys.stderr.write('WARNING: CMD does not contain a {{OUTPUT}} placeholder.\n')
-    elif len(aRes2) > 1:  # can not be more than one
+        sys.stderr.write('[mpRun WARNING]: *** CMD does not contain a {{OUTPUT}} placeholder. ***\n')
+    # TEST:
+    # can not be more than one
+    elif len(aRes2) > 1:
         oParser.error('CMD should contain at most one occurrence of an {{OUTPUT}} placeholder. EXIT.')
 
-    # Error-file path
+    # Stderr-file path
     sErrPath = None
     if oArgs.sErrorPath:
+        # TEST:
+        # Test if stderr-path exists
         if not os.path.isdir(oArgs.sErrorPath):
-            sys.stderr.write('WARNING: The error-path "%s" does not exist. Will be ignored.\n'%oArgs.sErrorPath)
+            sys.stderr.write('[mpRun WARNING]: *** The stderr-path "%s" does not exist. Will be ignored and stderr -> dev/null ***\n'%oArgs.sErrorPath)
         else:
             sErrPath = os.path.abspath(os.path.expanduser(oArgs.sErrorPath))
+    # Stdout-file path
+    sStdoutPath = None
+    if oArgs.sStdoutPath:
+        # TEST:
+        # Test if stdout-path exists
+        if not os.path.isdir(oArgs.sStdoutPath):
+            sys.stderr.write('[mpRun WARNING]: *** The stdout-path "%s" does not exist. Will be ignored and stdout -> dev/null. ***\n'%oArgs.sStdoutPath)
+        else:
+            sStdoutPath = os.path.abspath(os.path.expanduser(oArgs.sStdoutPath))
 
     # ------------------------------------------------------
     #  THREADING
     # ------------------------------------------------------
     # get number of subprocesses to use
     iNofProcesses = oArgs.iP
+    # TEST:
+    # Number of processes cannot be smaller than 1.
     if iNofProcesses<1:
         oParser.error('-p has to be > 0: EXIT.')
 
@@ -166,15 +200,17 @@ def main():
         sERR = None
         if sErrPath:
             # create error-file path
-            sERR = os.path.join(sErrPath ,'%s.err'%(os.path.basename(sFile)))
-
-        aJobs.append((iJob, sCMD2, sERR))
+            sERR = os.path.join(sErrPath ,'%s.stderr'%(os.path.basename(sFile)))
+        sOUT = None
+        if sStdoutPath:
+            sOUT = os.path.join(sStdoutPath ,'%s.stdout'%(os.path.basename(sFile)))
+        aJobs.append((iJob, sCMD2, sERR, sOUT))
         iJob+=1
 
 
     # Number of total jobs
     iNumJobs = len(aJobs)
-    sOUT = '[multiprocessRun]: #JOBS TO RUN: %i | #CONCURRENT PROCESSES TO USE: %i\n'
+    sOUT = '[mpRun OK]: #JOBS TO RUN: %i | #CONCURRENT PROCESSES TO USE: %i\n'
     sys.stdout.write(sOUT%(iNumJobs, iNofProcesses))
 
     # Timing
@@ -213,22 +249,23 @@ def main():
             iBarDone = iNumDone*iProgressBarLength/iNumJobs
             sBar = ('=' * iBarDone).ljust(iProgressBarLength)
             iPercent = int(iNumDone*100/iNumJobs)
-            sys.stdout.write("[multiprocessRun]: [%s] %s%%\r" \
+            sys.stdout.write("[mpRun OK]: [%s] %s%%\r" \
                              %(sBar, str(iPercent).rjust(3)))
             sys.stdout.flush()
             time.sleep(0.1)  # wait a bit: here we test all .1 secs
         # Finish the progress bar
         sBar = '=' * iProgressBarLength
-        sys.stdout.write("[multiprocessRun]: [%s] 100%%\r\n"%(sBar))
+        sys.stdout.write("[mpRun OK]: [%s] 100%%\r\n"%(sBar))
 
-    # does actually not produce a result so not necessary
-    # aResults = aResults.get()
+    # does actually not produce a result but returns exit/return-codes
+    #aResults = aResults.get()
+    #aReturncodes = [t[1] for t in aResults]
     # --------------------------------------------
-
     fEnd_time = timer()
     # Print the timing
-    sys.stdout.write('[multiprocessRun]: RUNTIME(s): %.4f | AVG/JOB: %.4f\n' \
+    sys.stdout.write('[mpRun OK]: RUNTIME(s): %.4f | AVG/JOB: %.4f\n' \
                      %(fEnd_time - fStart_time, (fEnd_time - fStart_time)/iNumJobs))
+
     return
 
 if __name__ == '__main__':
