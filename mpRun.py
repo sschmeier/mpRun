@@ -26,6 +26,7 @@ Will be the *basename* of the {{INPUT}}-file with an added ".out"-ending.
 VERSION HISTORY
 ===============
 
+0.1.2   2016/02.17   Better WARNINGS; stdout and strerr now possibl to capture
 0.1.1   2016/02/17   Some improvements.
 0.1.0   2016/02/17   Initial version.
 
@@ -35,7 +36,7 @@ See supplied LICENCE file.
 
 2016, copyright Sebastian Schmeier (s.schmeier@gmail.com), http://sschmeier.com
 """
-__version__='0.1.1'
+__version__='0.1.2'
 __date__='2016/02/17'
 __email__='s.schmeier@gmail.com'
 __author__='Sebastian Schmeier'
