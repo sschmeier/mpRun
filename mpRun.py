@@ -26,7 +26,8 @@ Will be the *basename* of the {{INPUT}}-file with an added ".out"-ending.
 VERSION HISTORY
 ===============
 
-0.1.2   2016/02.17   Better WARNINGS; stdout and strerr now possibl to capture
+0.1.3   2016/02/18   Did not call aResults.get(), which led to premature end o program
+0.1.2   2016/02/17   Better WARNINGS; stdout and strerr now possibl to capture
 0.1.1   2016/02/17   Some improvements.
 0.1.0   2016/02/17   Initial version.
 
@@ -36,8 +37,8 @@ See supplied LICENCE file.
 
 2016, copyright Sebastian Schmeier (s.schmeier@gmail.com), http://sschmeier.com
 """
-__version__='0.1.2'
-__date__='2016/02/17'
+__version__='0.1.3'
+__date__='2016/02/18'
 __email__='s.schmeier@gmail.com'
 __author__='Sebastian Schmeier'
 import sys, os, os.path, argparse, time, subprocess, re
@@ -285,9 +286,9 @@ def main():
     # collect all error return-codes
     aReturncodes = [t[1] for t in aResults]
     if max(aReturncodes) != 0:
-          sys.stderr.write('[mpRun WARNING]: *** Non-zero exit codes of some child process encountered. Better check with --stderr. ***\n')
-
-    sys.stdout.write('[mpRun OK]: END\n')
+        sys.stdout.write('[mpRun WARNING]: END OF PROGRAM. Non-zero error returncodes encountered\n')
+    else:
+        sys.stdout.write('[mpRun OK]: END OF PROGRAM.\n')
                      
     return
 
