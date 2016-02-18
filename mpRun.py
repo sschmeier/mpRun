@@ -26,7 +26,8 @@ Will be the *basename* of the {{INPUT}}-file with an added ".out"-ending.
 VERSION HISTORY
 ===============
 
-0.1.2   2016/02.17   Better WARNINGS; stdout and strerr now possibl to capture
+0.1.3   2016/02/18   Did not call aResults.get(), which led to premature end o program
+0.1.2   2016/02/17   Better WARNINGS; stdout and strerr now possibl to capture
 0.1.1   2016/02/17   Some improvements.
 0.1.0   2016/02/17   Initial version.
 
@@ -36,8 +37,8 @@ See supplied LICENCE file.
 
 2016, copyright Sebastian Schmeier (s.schmeier@gmail.com), http://sschmeier.com
 """
-__version__='0.1.2'
-__date__='2016/02/17'
+__version__='0.1.3'
+__date__='2016/02/18'
 __email__='s.schmeier@gmail.com'
 __author__='Sebastian Schmeier'
 import sys, os, os.path, argparse, time, subprocess, re
@@ -74,6 +75,11 @@ def parse_cmdline():
                          dest='sStdoutPath',
                          default=None,
                          help='Create a separate stdout-file for each job in the directory at PATH. [default: Do not create any stdout-files, stdout->dev/null]')
+    oParser.add_argument('--dry',
+                         action='store_true',
+                         dest='bDry',
+                         default=False,
+                         help='Only print created commands without runnig them. [default: False]')
 
     group1 = oParser.add_argument_group('Multithreading', 'optional arguments:')
     group1.add_argument('-p', '--processes',
@@ -117,11 +123,12 @@ def run_command(args):
         oFstdout = open(os.devnull, 'w')
 
     iReturncode = subprocess.call(sCMD, shell=True, stdout=oFstdout, stderr=oFstderr)
-    oFNULL.close()
+    oFstdout.close()
+    oFstderr.close()
     # TEST:
     # check returncode for non-zero status
     if iReturncode != 0:
-        sys.stderr.write('[mpRun WARNING]: *** Non-zero exit codes of child process encountered. Better check with --error. ***\n')
+        sys.stderr.write('[mpRun WARNING]: *** Non-zero exit codes of child process encountered. Better check with --stderr. ***\n')
     return (args, iReturncode)
 
 def main():
@@ -208,12 +215,19 @@ def main():
         aJobs.append((iJob, sCMD2, sERR, sOUT))
         iJob+=1
 
-
+    
     # Number of total jobs
     iNumJobs = len(aJobs)
     sOUT = '[mpRun OK]: #JOBS TO RUN: %i | #CONCURRENT PROCESSES TO USE: %i\n'
     sys.stdout.write(sOUT%(iNumJobs, iNofProcesses))
 
+    # Dry run?
+    if oArgs.bDry:
+        sys.stdout.write('[mpRun WARNING]: *** DRY RUN: NOT PROCESSING ***\n')
+        for a in aJobs:
+            sys.stdout.write('%s\n'%a[1])
+        return
+            
     # Timing
     fStart_time = timer()  # very crude
 
@@ -259,14 +273,23 @@ def main():
         sys.stdout.write("[mpRun OK]: [%s] 100%%\r\n"%(sBar))
 
     # does actually not produce a result but returns exit/return-codes
-    #aResults = aResults.get()
-    #aReturncodes = [t[1] for t in aResults]
+    # however, need to call it otherwise program will not finish
+    # all processes
+    aResults = aResults.get()
+    
     # --------------------------------------------
     fEnd_time = timer()
     # Print the timing
     sys.stdout.write('[mpRun OK]: RUNTIME(s): %.4f | AVG/JOB: %.4f\n' \
                      %(fEnd_time - fStart_time, (fEnd_time - fStart_time)/iNumJobs))
 
+    # collect all error return-codes
+    aReturncodes = [t[1] for t in aResults]
+    if max(aReturncodes) != 0:
+        sys.stdout.write('[mpRun WARNING]: END OF PROGRAM. Non-zero error returncodes encountered\n')
+    else:
+        sys.stdout.write('[mpRun OK]: END OF PROGRAM.\n')
+                     
     return
 
 if __name__ == '__main__':
