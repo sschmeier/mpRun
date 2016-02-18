@@ -14,7 +14,7 @@ Simple script that takes a command-line command (`CMD`) that contains one INPUT-
 Python
 
 ## USAGE
-The program expects a command that has one input `{{INPUT}}` and at most one output `{{OUTPUT}}`. The {{INPUT}} needs to be specified in order for the program to execute. The `{{OUTPUT}}` in the command is optional.
+The program expects a command that has one input `{{INPUT}}` and at most one output `{{OUTPUT}}`. The `{{INPUT}}` needs to be specified in order for the program to execute. The `{{OUTPUT}}` in the command is optional.
 
 ### `{{INPUT}}`
 Will be replaced with the files supplied one at a time to create the pool of jobs.
