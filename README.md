@@ -6,9 +6,8 @@ Simple script that takes a command-line command (`CMD`) that contains one INPUT-
 ## INSTALLATION
 1. Download or clone the repo
 2. Simply move `mprun.py` file into the directory where you want to use
-   it. Alternatively,  you can make it executable `chmod x+a mprun.py` and move
-   it into a directory on your `PATH`, e.g. `mv mprun.py ~/bin` or create a
-   symbolic link, .e.g. `ln -s ${PWD}/mprun.py ~/bin/mprun.py`.
+   it. Alternatively,  you can run `/bin/bash bootstrap.sh` to make file 
+   executable and rsync it to ~/bin
 
 ## REQUIREMENTS
 Python
